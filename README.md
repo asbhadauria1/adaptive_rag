@@ -524,7 +524,7 @@ Contributions are welcome! Please follow these steps:
 | **Embeddings**                   | HuggingFace         | Latest  |
 | **Chat Database**                | MongoDB/InMemory    | Latest  |
 | **Document Processing**          | LangChain Community | ~0.3.27 |
-| **LLM Provider**                 | OpenRouter          | ~0.3.28 |
+| **LLM Provider**                 | OpenRouter          | Latest |
 | **Web Search**                   | Tavily              | Latest  |
 | **Async DB**                     | Motor               | Latest  |
 | **Data Validation**              | Pydantic            | ~2.11.7 |
