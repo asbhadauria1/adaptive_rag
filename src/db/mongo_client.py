@@ -1,11 +1,34 @@
 """
-MongoDB client initialization.
+MongoDB client configuration using Motor async driver.
 """
 
+import os
+from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 
-MONGO_URL = "mongodb://localhost:27017"
-DB_NAME = "adaptive_rag"
+load_dotenv()
 
-client = AsyncIOMotorClient(MONGO_URL)
-db = client[DB_NAME]
+MONGODB_URL = (
+    os.getenv("MONGODB_URL")
+    or os.getenv("MONGO_URL")
+    or os.getenv("MONGO_URI")
+    or os.getenv("MONGODB_URI")
+    or ""
+).strip()
+
+MONGODB_DB_NAME = (
+    os.getenv("MONGODB_DB_NAME")
+    or os.getenv("MONGO_DB_NAME")
+    or os.getenv("DB_NAME")
+    or "adaptive_rag"
+).strip()
+
+if not MONGODB_URL:
+    raise ValueError(
+        "Missing MongoDB connection string! Set MONGODB_URL in your Render Environment Variables."
+    )
+
+print(f"✅ Connecting to MongoDB Atlas database: '{MONGODB_DB_NAME}'", flush=True)
+
+client = AsyncIOMotorClient(MONGODB_URL)
+db = client[MONGODB_DB_NAME]
