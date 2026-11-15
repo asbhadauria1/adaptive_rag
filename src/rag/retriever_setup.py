@@ -1,5 +1,5 @@
 """
-Retriever setup and vector store configuration.
+Retriever setup and vector store configuration (Lazy-Loaded for Fast Startup).
 """
 
 import os
@@ -7,19 +7,22 @@ import os
 from langchain_core.documents import Document
 from langchain_core.tools import create_retriever_tool
 from langchain_huggingface import HuggingFaceEmbeddings
-
-# from langchain_openai import OpenAIEmbeddings
-# from langchain_qdrant import QdrantVectorStore
 from langchain_community.vectorstores import FAISS
 
 from src.core.config import settings
 
-# Using free local HuggingFace embeddings (no OpenAI key required for vectorization)
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-# Global variable to store the FAISS vectorstore instance
-# This ensures get_retriever() can access documents stored by retriever_chain()
+# Global variables for lazy initialization
+_embeddings = None
 _faiss_vectorstore = None
+
+
+def get_embeddings():
+    """Lazily initialize and return the HuggingFace embeddings model."""
+    global _embeddings
+    if _embeddings is None:
+        print("Initializing HuggingFace embeddings model (all-MiniLM-L6-v2)...")
+        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return _embeddings
 
 
 def retriever_chain(chunks: list[Document]):
@@ -35,14 +38,7 @@ def retriever_chain(chunks: list[Document]):
     global _faiss_vectorstore
 
     try:
-        # Commenting out Qdrant code for temporary FAISS usage
-        # vectorstore = QdrantVectorStore.from_documents(
-        #     documents=chunks,
-        #     embedding=embeddings,
-        #     url=settings.QDRANT_URL,
-        #     api_key=settings.QDRANT_API_KEY,
-        #     collection_name=settings.CODE_COLLECTION,
-        # )
+        embeddings = get_embeddings()
         vectorstore = FAISS.from_documents(documents=chunks, embedding=embeddings)
 
         # Store the vectorstore globally so get_retriever() can access it
@@ -72,15 +68,7 @@ def get_retriever():
     global _faiss_vectorstore
 
     try:
-        # Commenting out Qdrant code for temporary FAISS usage
-        # vectorstore = QdrantVectorStore.from_documents(
-        #     documents=[],
-        #     embedding=embeddings,
-        #     url=settings.QDRANT_URL,
-        #     api_key=settings.QDRANT_API_KEY,
-        #     collection_name=settings.CODE_COLLECTION,
-        # )
-        # retriever = vectorstore.as_retriever()
+        embeddings = get_embeddings()
 
         # Use the global vectorstore if it exists (documents have been uploaded)
         if _faiss_vectorstore is not None:
