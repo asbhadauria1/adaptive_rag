@@ -6,13 +6,16 @@ import os
 
 from langchain_core.documents import Document
 from langchain_core.tools import create_retriever_tool
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+
+# from langchain_openai import OpenAIEmbeddings
 # from langchain_qdrant import QdrantVectorStore
 from langchain_community.vectorstores import FAISS
 
 from src.core.config import settings
 
-embeddings = OpenAIEmbeddings()
+# Using free local HuggingFace embeddings (no OpenAI key required for vectorization)
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # Global variable to store the FAISS vectorstore instance
 # This ensures get_retriever() can access documents stored by retriever_chain()
@@ -40,10 +43,7 @@ def retriever_chain(chunks: list[Document]):
         #     api_key=settings.QDRANT_API_KEY,
         #     collection_name=settings.CODE_COLLECTION,
         # )
-        vectorstore = FAISS.from_documents(
-            documents=chunks,
-            embedding=embeddings
-        )
+        vectorstore = FAISS.from_documents(documents=chunks, embedding=embeddings)
 
         # Store the vectorstore globally so get_retriever() can access it
         _faiss_vectorstore = vectorstore
@@ -93,12 +93,11 @@ def get_retriever():
 
             dummy_doc = LangChainDocument(
                 page_content="No documents have been uploaded yet. Please upload a document first.",
-                metadata={"source": "initialization"}
+                metadata={"source": "initialization"},
             )
 
             _faiss_vectorstore = FAISS.from_documents(
-                documents=[dummy_doc],
-                embedding=embeddings
+                documents=[dummy_doc], embedding=embeddings
             )
             retriever = _faiss_vectorstore.as_retriever()
 
@@ -113,7 +112,7 @@ def get_retriever():
             retriever,
             "retriever_customer_uploaded_documents",
             f"Use this tool **only** to answer questions about: {description}\n"
-            "Don't use this tool to answer anything else."
+            "Don't use this tool to answer anything else.",
         )
 
         return retriever_tool
