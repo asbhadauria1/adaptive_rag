@@ -1,11 +1,11 @@
 """
-Retriever setup and vector store configuration (True Lazy-Loading).
+Retriever setup and vector store configuration using OpenRouter API embeddings.
 """
 
 import os
 from langchain_core.documents import Document
 from langchain_core.tools import tool
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 
 # Global variables for lazy initialization
@@ -14,14 +14,22 @@ _faiss_vectorstore = None
 
 
 def get_embeddings():
-    """Lazily initialize and return the HuggingFace embeddings model on first use."""
+    """Lazily initialize and return OpenRouter-backed OpenAI embeddings."""
     global _embeddings
     if _embeddings is None:
+        api_key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+        if not api_key:
+            raise ValueError("Missing OPENROUTER_API_KEY environment variable.")
+
         print(
-            "Initializing HuggingFace embeddings model (all-MiniLM-L6-v2)...",
+            "Initializing OpenRouter embeddings (openai/text-embedding-3-small)...",
             flush=True,
         )
-        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        _embeddings = OpenAIEmbeddings(
+            model="openai/text-embedding-3-small",
+            openai_api_key=api_key,
+            openai_api_base="https://openrouter.ai/api/v1",
+        )
     return _embeddings
 
 
@@ -46,8 +54,7 @@ def retriever_chain(chunks: list[Document]):
 
 def get_retriever():
     """
-    Return a LangChain tool connected to the FAISS vector store WITHOUT
-    loading HuggingFace/PyTorch models at import time.
+    Return a LangChain tool connected to the FAISS vector store.
     """
     if os.path.exists("description.txt"):
         with open("description.txt", "r", encoding="utf-8") as f:

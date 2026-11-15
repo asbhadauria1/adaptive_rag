@@ -5,8 +5,8 @@ Document upload and processing module.
 import os
 import tempfile
 
-from fastapi import UploadFile, File
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from fastapi import UploadFile, File, HTTPException
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from src.rag.retriever_setup import retriever_chain
@@ -22,7 +22,7 @@ def documents(description: str, file: UploadFile = File(...)):
 
     Args:
         description: User-provided document description.
-        file: The uploaded file (PDF or TXT).
+        file: The uploaded file (PDF, TXT, or DOCX).
 
     Returns:
         Boolean indicating success of the upload process.
@@ -30,39 +30,41 @@ def documents(description: str, file: UploadFile = File(...)):
     Raises:
         HTTPException: If file type is not supported or loading fails.
     """
-    filename = file.filename
-    print(filename)
-    if not filename.endswith(".pdf") and not filename.endswith(".txt"):
-        from fastapi import HTTPException
+    filename = (file.filename or "").lower()
+    print(f"Uploading file: {file.filename}")
+
+    if not filename.endswith((".pdf", ".txt", ".docx")):
         raise HTTPException(
             status_code=400,
-            detail="Only PDF and TXT files are supported"
+            detail="Only PDF, TXT, and DOCX files are supported",
         )
 
     file_bytes = file.file.read()
 
     with tempfile.NamedTemporaryFile(
         delete=False,
-        suffix=os.path.splitext(filename)[1]
+        suffix=os.path.splitext(filename)[1],
     ) as tmp_file:
         tmp_file.write(file_bytes)
         tmp_path = tmp_file.name
 
     if filename.endswith(".pdf"):
         loader = PyPDFLoader(tmp_path)
+    elif filename.endswith(".docx"):
+        loader = Docx2txtLoader(tmp_path)
     else:
         loader = TextLoader(tmp_path, encoding="utf-8")
 
     try:
         docs = loader.load()
     except Exception as e:
-        from fastapi import HTTPException
         raise HTTPException(
             status_code=500,
-            detail=f"Error loading file: {e}"
+            detail=f"Error loading file: {e}",
         )
     finally:
-        os.unlink(tmp_path)
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
     # Enhance description using LLM
     description_llm = enhance_description_with_llm(description)
@@ -78,12 +80,8 @@ def documents(description: str, file: UploadFile = File(...)):
     # Split documents into chunks
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
-        chunk_overlap=150
+        chunk_overlap=150,
     )
     chunks = splitter.split_documents(docs)
 
     return retriever_chain(chunks)
-
-
-
-
