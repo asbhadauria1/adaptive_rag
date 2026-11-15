@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
 langchain~=0.3.27
 langgraph~=0.5.4
 langchain_community~=0.3.27
@@ -19,6 +21,4 @@ fastapi
 uvicorn
 motor
 pymongo
-streamlit
-requests
 python-multipart

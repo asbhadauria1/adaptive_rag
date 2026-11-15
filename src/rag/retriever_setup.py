@@ -1,15 +1,12 @@
 """
-Retriever setup and vector store configuration (Lazy-Loaded for Fast Startup).
+Retriever setup and vector store configuration (True Lazy-Loading).
 """
 
 import os
-
 from langchain_core.documents import Document
-from langchain_core.tools import create_retriever_tool
+from langchain_core.tools import tool
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-
-from src.core.config import settings
 
 # Global variables for lazy initialization
 _embeddings = None
@@ -17,10 +14,13 @@ _faiss_vectorstore = None
 
 
 def get_embeddings():
-    """Lazily initialize and return the HuggingFace embeddings model."""
+    """Lazily initialize and return the HuggingFace embeddings model on first use."""
     global _embeddings
     if _embeddings is None:
-        print("Initializing HuggingFace embeddings model (all-MiniLM-L6-v2)...")
+        print(
+            "Initializing HuggingFace embeddings model (all-MiniLM-L6-v2)...",
+            flush=True,
+        )
         _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     return _embeddings
 
@@ -28,83 +28,49 @@ def get_embeddings():
 def retriever_chain(chunks: list[Document]):
     """
     Initialize and store documents in FAISS vector database.
-
-    Args:
-        chunks: List of document chunks to store.
-
-    Returns:
-        Boolean indicating success of the operation.
     """
     global _faiss_vectorstore
 
     try:
         embeddings = get_embeddings()
         vectorstore = FAISS.from_documents(documents=chunks, embedding=embeddings)
-
-        # Store the vectorstore globally so get_retriever() can access it
         _faiss_vectorstore = vectorstore
 
-        print("FAISS vector store initialized with documents")
-        print(f"Vectorstore contains {len(chunks)} document chunks")
+        print("FAISS vector store initialized with documents", flush=True)
+        print(f"Vectorstore contains {len(chunks)} document chunks", flush=True)
         return True
     except Exception as e:
-        print(f"Error storing documents in FAISS: {e}")
+        print(f"Error storing documents in FAISS: {e}", flush=True)
         return False
 
 
 def get_retriever():
     """
-    Get a retriever tool connected to the FAISS vector store.
-
-    Returns the retriever tool that can search documents stored by retriever_chain().
-    If no documents have been uploaded yet, creates a retriever with a dummy document.
-
-    Returns:
-        A LangChain retriever tool configured for the vector store.
-
-    Raises:
-        Exception: If vector store initialization fails.
+    Return a LangChain tool connected to the FAISS vector store WITHOUT
+    loading HuggingFace/PyTorch models at import time.
     """
-    global _faiss_vectorstore
+    if os.path.exists("description.txt"):
+        with open("description.txt", "r", encoding="utf-8") as f:
+            description = f.read().strip()
+    else:
+        description = "customer uploaded documents"
 
-    try:
-        embeddings = get_embeddings()
-
-        # Use the global vectorstore if it exists (documents have been uploaded)
-        if _faiss_vectorstore is not None:
-            retriever = _faiss_vectorstore.as_retriever()
-            print("Using existing FAISS vectorstore with uploaded documents")
-        else:
-            # No documents uploaded yet, create dummy for initialization
-            print("No documents uploaded yet, creating dummy vectorstore")
-            from langchain_core.documents import Document as LangChainDocument
-
-            dummy_doc = LangChainDocument(
-                page_content="No documents have been uploaded yet. Please upload a document first.",
-                metadata={"source": "initialization"},
+    @tool("retriever_customer_uploaded_documents")
+    def retriever_tool(query: str) -> str:
+        """Search and return information from uploaded customer documents."""
+        global _faiss_vectorstore
+        if _faiss_vectorstore is None:
+            return (
+                "No documents have been uploaded yet. Please upload a document first."
             )
 
-            _faiss_vectorstore = FAISS.from_documents(
-                documents=[dummy_doc], embedding=embeddings
-            )
-            retriever = _faiss_vectorstore.as_retriever()
+        retriever = _faiss_vectorstore.as_retriever()
+        docs = retriever.invoke(query)
+        return "\n\n".join(doc.page_content for doc in docs)
 
-        # Load document description
-        if os.path.exists("description.txt"):
-            with open("description.txt", "r", encoding="utf-8") as f:
-                description = f.read()
-        else:
-            description = None
+    retriever_tool.description = (
+        f"Use this tool **only** to answer questions about: {description}\n"
+        "Don't use this tool to answer anything else."
+    )
 
-        retriever_tool = create_retriever_tool(
-            retriever,
-            "retriever_customer_uploaded_documents",
-            f"Use this tool **only** to answer questions about: {description}\n"
-            "Don't use this tool to answer anything else.",
-        )
-
-        return retriever_tool
-
-    except Exception as e:
-        print(f"Error initializing retriever: {e}")
-        raise Exception(e)
+    return retriever_tool
