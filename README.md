@@ -3,7 +3,7 @@
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-green.svg)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.5.4-orange.svg)](https://python.langchain.com/langgraph/)
-[![Qdrant](https://img.shields.io/badge/Qdrant-VectorDB-purple.svg)](https://qdrant.tech/)
+[![FAISS](https://img.shields.io/badge/FAISS-VectorDB-purple.svg)](https://github.com/facebookresearch/faiss)
 
 ## 📋 Overview
 
@@ -290,17 +290,11 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```env
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key_here
+# OpenRouter Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
 
 # Tavily Search Configuration
 TAVILY_API_KEY=your_tavily_api_key_here
-
-# Qdrant Configuration
-QDRANT_URL=http://localhost:6333
-QDRANT_API_KEY=your_qdrant_api_key
-QDRANT_CODE_COLLECTION=code_documents
-QDRANT_DOCS_COLLECTION=documents
 
 # MongoDB Configuration
 MONGODB_URL=mongodb://localhost:27017
@@ -521,18 +515,19 @@ Contributions are welcome! Please follow these steps:
 
 | Component                        | Technology          | Version |
 | -------------------------------- | ------------------- | ------- |
-| **LLM Framework**          | LangChain           | ~0.3.27 |
-| **Workflow Orchestration** | LangGraph           | ~0.5.4  |
-| **Web Framework**          | FastAPI             | Latest  |
-| **ASGI Server**            | Uvicorn             | Latest  |
-| **UI Framework**           | Streamlit           | Latest  |
-| **Vector Database**        | Qdrant/FAISS        | Latest  |
-| **Chat Database**          | MongoDB/InMemory    | Latest  |
-| **Document Processing**    | LangChain Community | ~0.3.27 |
-| **LLM Provider**           | OpenAI              | ~0.3.28 |
-| **Web Search**             | Tavily              | Latest  |
-| **Async DB**               | Motor               | Latest  |
-| **Data Validation**        | Pydantic            | ~2.11.7 |
+| **LLM Framework**                | LangChain           | ~0.3.27 |
+| **Workflow Orchestration**       | LangGraph           | ~0.5.4  |
+| **Web Framework**                | FastAPI             | Latest  |
+| **ASGI Server**                  | Uvicorn             | Latest  |
+| **UI Framework**                 | Streamlit           | Latest  |
+| **Vector Database**              | Qdrant/FAISS        | Latest  |
+| **Embeddings**                   | HuggingFace         | Latest  |
+| **Chat Database**                | MongoDB/InMemory    | Latest  |
+| **Document Processing**          | LangChain Community | ~0.3.27 |
+| **LLM Provider**                 | OpenRouter          | ~0.3.28 |
+| **Web Search**                   | Tavily              | Latest  |
+| **Async DB**                     | Motor               | Latest  |
+| **Data Validation**              | Pydantic            | ~2.11.7 |
 
 ---
 
