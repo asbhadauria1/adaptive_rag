@@ -1,31 +1,93 @@
 """
-MongoDB client configuration using Motor async driver.
+Chat history storage using MongoDB backend.
 """
 
-import os
-from dotenv import load_dotenv
-from motor.motor_asyncio import AsyncIOMotorClient
+from datetime import datetime
+from typing import List
 
-load_dotenv()
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.messages import BaseMessage
 
-MONGODB_URL = (
-    os.getenv("MONGODB_URL")
-    or os.getenv("MONGO_URL")
-    or os.getenv("MONGO_URI")
-    or os.getenv("MONGODB_URI")
-)
+from src.db.mongo_client import db
 
-MONGODB_DB_NAME = (
-    os.getenv("MONGODB_DB_NAME")
-    or os.getenv("MONGO_DB_NAME")
-    or os.getenv("DB_NAME")
-    or "adaptive_rag"
-)
+collection = db["chat_history"]
 
-if not MONGODB_URL:
-    raise ValueError(
-        "Missing MongoDB connection string! Set MONGODB_URL in your environment variables."
-    )
 
-client = AsyncIOMotorClient(MONGODB_URL)
-db = client[MONGODB_DB_NAME]
+class MongoDBChatMessageHistory(BaseChatMessageHistory):
+    """Chat history backed by MongoDB."""
+
+    def __init__(self, session_id: str):
+        """
+        Initialize chat history for a session.
+
+        Args:
+            session_id: Unique session identifier.
+        """
+        self.session_id = session_id
+
+    async def add_message(self, message: BaseMessage) -> None:
+        """
+        Save a message to MongoDB.
+
+        Args:
+            message: The message to save.
+        """
+        await collection.insert_one(
+            {
+                "session_id": self.session_id,
+                "type": message.type,
+                "content": message.content,
+                "additional_kwargs": message.additional_kwargs,
+                "timestamp": datetime.utcnow(),
+            }
+        )
+
+    async def get_messages(self) -> List[BaseMessage]:
+        """
+        Load all messages for a session from MongoDB.
+
+        Returns:
+            List of messages in chronological order.
+        """
+        from langchain_core.messages import messages_from_dict
+
+        cursor = collection.find({"session_id": self.session_id}).sort("timestamp", 1)
+        docs = await cursor.to_list(length=1000)
+
+        # Convert to BaseMessage objects
+        return messages_from_dict(
+            [
+                {
+                    "type": d["type"],
+                    "data": {
+                        "content": d["content"],
+                        "additional_kwargs": d.get("additional_kwargs", {}),
+                    },
+                }
+                for d in docs
+            ]
+        )
+
+    async def clear(self) -> None:
+        """Delete all messages for a session."""
+        await collection.delete_many({"session_id": self.session_id})
+
+
+class ChatHistory:
+    """Factory for MongoDB-backed chat history."""
+
+    @classmethod
+    def get_session_history(
+        cls, session_id: str, config: dict = None
+    ) -> MongoDBChatMessageHistory:
+        """
+        Get or create chat history for a session.
+
+        Args:
+            session_id: Unique session identifier.
+            config: Optional configuration dictionary.
+
+        Returns:
+            MongoDBChatMessageHistory instance for the session.
+        """
+        return MongoDBChatMessageHistory(session_id)
