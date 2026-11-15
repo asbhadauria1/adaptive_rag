@@ -39,6 +39,8 @@ async def rag_query(req: QueryRequest):
         await chat_history.add_message(AIMessage(content=output_text))
 
         return {"result": result["messages"][-1]}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(
@@ -54,18 +56,36 @@ async def upload_file(
     Upload a document for RAG processing.
 
     Args:
-        file: The file to upload (PDF or TXT).
+        file: The file to upload (PDF, TXT, or DOCX).
         description: Document description provided via header.
 
     Returns:
         Upload status.
     """
+    filename = (file.filename or "").lower()
+    allowed_extensions = (".pdf", ".txt", ".docx")
+    allowed_types = {
+        "application/pdf",
+        "text/plain",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+
+    if not (
+        filename.endswith(allowed_extensions) or file.content_type in allowed_types
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF, TXT, and DOCX files are supported.",
+        )
+
     try:
         if inspect.iscoroutinefunction(documents):
             status_upload = await documents(description, file)
         else:
             status_upload = documents(description, file)
         return {"status": status_upload}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")

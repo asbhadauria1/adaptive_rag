@@ -22,3 +22,5 @@ uvicorn
 motor
 pymongo
 python-multipart
+pypdf
+docx2txt

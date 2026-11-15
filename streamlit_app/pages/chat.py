@@ -18,7 +18,10 @@ if "messages" not in st.session_state:
 # Sidebar: Document Upload for RAG
 with st.sidebar:
     st.header("📂 Upload Documents")
-    uploaded_file = st.file_uploader("Upload a PDF or TXT file", type=["pdf", "txt"])
+    uploaded_file = st.file_uploader(
+        "Upload a PDF, TXT, or DOCX file",
+        type=["pdf", "txt", "docx"],
+    )
     doc_description = st.text_input(
         "Document description",
         placeholder="e.g., Project architecture or resume",
