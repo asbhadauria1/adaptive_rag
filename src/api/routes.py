@@ -2,7 +2,9 @@
 API routes for RAG operations.
 """
 
-from fastapi import APIRouter, UploadFile, File, Header
+import inspect
+import traceback
+from fastapi import APIRouter, UploadFile, File, Header, HTTPException
 from langchain_core.messages import HumanMessage, AIMessage
 
 from src.memory.chat_history_mongo import ChatHistory
@@ -24,27 +26,29 @@ async def rag_query(req: QueryRequest):
     Returns:
         The generated response from the RAG pipeline.
     """
-    #chat_history=ChatInMemoryHistory.get_session_history(req.token)
-    chat_history = ChatHistory.get_session_history(req.session_id)
-    await chat_history.add_message(HumanMessage(content=req.query))
+    try:
+        chat_history = ChatHistory.get_session_history(req.session_id)
+        await chat_history.add_message(HumanMessage(content=req.query))
 
-    # Fetch full history
-    messages = await chat_history.get_messages()
-    result = builder.invoke({
-        "messages": messages
-    })
-    output_text = result["messages"][-1].content
+        # Fetch full history
+        messages = await chat_history.get_messages()
+        result = builder.invoke({"messages": messages})
+        output_text = result["messages"][-1].content
 
-    # Save assistant message
-    await chat_history.add_message(AIMessage(content=output_text))
+        # Save assistant message
+        await chat_history.add_message(AIMessage(content=output_text))
 
-    return {"result": result["messages"][-1]}
+        return {"result": result["messages"][-1]}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, detail=f"Query processing failed: {str(e)}"
+        )
 
 
 @router.post("/rag/documents/upload")
 async def upload_file(
-    file: UploadFile = File(...),
-    description: str = Header(..., alias="X-Description")
+    file: UploadFile = File(...), description: str = Header(..., alias="X-Description")
 ):
     """
     Upload a document for RAG processing.
@@ -56,6 +60,12 @@ async def upload_file(
     Returns:
         Upload status.
     """
-    status_upload = documents(description, file)
-    return {"status": status_upload}
-
+    try:
+        if inspect.iscoroutinefunction(documents):
+            status_upload = await documents(description, file)
+        else:
+            status_upload = documents(description, file)
+        return {"status": status_upload}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
