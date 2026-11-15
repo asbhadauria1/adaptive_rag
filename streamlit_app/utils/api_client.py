@@ -79,3 +79,18 @@ def document_upload_rag(file, description: str) -> bool:
             logger.exception("Document upload failed: %s", e)
 
     return False
+
+
+def create_user(username: str, password: str, api_token: str) -> bool:
+    """Stub for unused authentication endpoint."""
+    return True
+
+
+def login_user(username: str, password: str, api_token: str) -> dict:
+    """Stub for unused authentication endpoint."""
+    return {"token": "demo-token"}
+
+
+def get_api_token() -> str:
+    """Stub for unused authentication endpoint."""
+    return "demo-token"
