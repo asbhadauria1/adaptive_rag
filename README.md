@@ -1,6 +1,6 @@
 # Adaptive RAG - Agentic AI Chatbot
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit%20Cloud-FF4B4B?logo=streamlit&logoColor=white)](YOUR_STREAMLIT_APP_URL_HERE)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit%20Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://adaptive-rag-system.streamlit.app/)
 [![Backend API](https://img.shields.io/badge/API%20Docs-FastAPI%20on%20Render-009688?logo=fastapi&logoColor=white)](https://adaptive-rag-backend-c8m7.onrender.com/docs)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.5.4-orange.svg)](https://python.langchain.com/langgraph/)
