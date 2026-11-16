@@ -1,6 +1,14 @@
+import sys
 import uuid
+from pathlib import Path
 import streamlit as st
-from utils.api_client import send_query, upload_document
+
+# Ensure streamlit_app/ is on sys.path for reliable imports on Streamlit Cloud
+APP_DIR = Path(__file__).resolve().parent.parent
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
+
+from utils.api_client import query_backend, document_upload_rag
 
 # 1. Page Configuration
 st.set_page_config(
@@ -128,13 +136,17 @@ with st.sidebar:
                 st.warning("Please enter a short description of the file.")
             else:
                 with st.spinner("Chunking & embedding document..."):
-                    success = upload_document(uploaded_file, doc_description.strip())
+                    success = document_upload_rag(
+                        uploaded_file, doc_description.strip()
+                    )
                 if success:
                     st.session_state.active_doc = uploaded_file.name
                     st.toast(f"Indexed {uploaded_file.name}!", icon="✅")
                     st.rerun()
                 else:
-                    st.error("Upload failed. If the backend was sleeping, retry in 15s.")
+                    st.error(
+                        "Upload failed. If the backend was sleeping, retry in 15s."
+                    )
 
     st.divider()
 
@@ -156,6 +168,7 @@ with st.sidebar:
         "ℹ️ **Cold-Start Note:** Hosted on Render's free tier—first message after 15m idle takes ~30s to wake the server."
     )
 
+
 # 5. Helper to Process a Prompt
 def handle_user_prompt(prompt_text: str):
     st.session_state.messages.append({"role": "user", "content": prompt_text})
@@ -164,7 +177,7 @@ def handle_user_prompt(prompt_text: str):
 
     with st.chat_message("assistant", avatar=":material/smart_toy:"):
         with st.spinner("Routing query & generating response..."):
-            response = send_query(prompt_text, st.session_state.session_id)
+            response = query_backend(prompt_text, st.session_state.session_id)
         st.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
@@ -191,20 +204,28 @@ if not st.session_state.messages:
 
     with col1:
         if st.button("📄 Summarize uploaded doc", use_container_width=True):
-            starter_prompt = "Summarize the main points and key details from the uploaded document."
+            starter_prompt = (
+                "Summarize the main points and key details from the uploaded document."
+            )
     with col2:
         if st.button("🌐 Latest AI news (Web)", use_container_width=True):
-            starter_prompt = "What are the latest breakthroughs in agentic AI workflows?"
+            starter_prompt = (
+                "What are the latest breakthroughs in agentic AI workflows?"
+            )
     with col3:
         if st.button("💡 Explain Adaptive RAG", use_container_width=True):
-            starter_prompt = "How does Adaptive RAG differ from standard naive RAG pipelines?"
+            starter_prompt = (
+                "How does Adaptive RAG differ from standard naive RAG pipelines?"
+            )
 
     if starter_prompt:
         handle_user_prompt(starter_prompt)
         st.rerun()
 else:
     for msg in st.session_state.messages:
-        avatar = ":material/person:" if msg["role"] == "user" else ":material/smart_toy:"
+        avatar = (
+            ":material/person:" if msg["role"] == "user" else ":material/smart_toy:"
+        )
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 
